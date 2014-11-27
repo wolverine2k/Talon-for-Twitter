@@ -18,18 +18,25 @@ import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
 import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.klinker.android.twitter.registration.Registration;
+import com.klinker.android.twitter.settings.AppSettings;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
 
 import java.io.IOException;
 
 public abstract class GCMRegisterActivity extends Activity {
 
     private static final String TAG = "GoogleCloudMessaging";
+    private static final String POST_URL = "https://talon-twitter.appspot.com/_ah/api/registration/v1/registerDevice/";
 
     // if this is true, it will register you with the push notification server and you will
     // receive a push every single time another (developer i assume right now) hits the api
     // setting it to false and running the app will unregister you from the system and you will stop
     // receiving notifications
-    private static final boolean PUSH_NOTIFICATIONS = false;
+    private static final boolean PUSH_NOTIFICATIONS = true;
 
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
@@ -150,7 +157,20 @@ public abstract class GCMRegisterActivity extends Activity {
                     regid = gcm.register(SENDER_ID);
                     msg = "Device registered, registration ID=" + regid;
 
-                    regService.register(regid).execute();
+                    //regService.register(regid).execute();
+
+                    HttpClient client = new DefaultHttpClient();
+                    HttpPost post = new HttpPost(POST_URL + regid + "/" + AppSettings.getInstance(mContext).myScreenName);
+
+                    HttpResponse response = client.execute(post);
+
+                    if (response.getStatusLine().getStatusCode() == 204) {
+                        Log.v(TAG, "response 204, success");
+                    } else if (response.getStatusLine().getStatusCode() == 200) {
+                        Log.v(TAG, "response 200, success");
+                    } else {
+                        Log.v(TAG, "response " + response.getStatusLine().getStatusCode() + ", error");
+                    }
 
                     // Persist the regID - no need to register again.
                     storeRegistrationId(mContext, regid);

@@ -27,8 +27,6 @@ public class PushNotificationService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        Log.v("GoogleCloudMessaging", "received message");
-
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
 
