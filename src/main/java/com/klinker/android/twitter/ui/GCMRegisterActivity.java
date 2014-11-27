@@ -159,8 +159,13 @@ public abstract class GCMRegisterActivity extends Activity {
 
                     //regService.register(regid).execute();
 
+                    AppSettings settings = AppSettings.getInstance(mContext);
                     HttpClient client = new DefaultHttpClient();
-                    HttpPost post = new HttpPost(POST_URL + regid + "/" + AppSettings.getInstance(mContext).myScreenName);
+                    HttpPost post = new HttpPost(
+                            POST_URL + regid + "/" +
+                            settings.myScreenName + "/" +
+                            settings.myId
+                    );
 
                     HttpResponse response = client.execute(post);
 

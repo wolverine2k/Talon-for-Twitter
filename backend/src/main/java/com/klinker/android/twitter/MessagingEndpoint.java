@@ -11,6 +11,7 @@ import com.google.android.gcm.server.Message;
 import com.google.android.gcm.server.Result;
 import com.google.android.gcm.server.Sender;
 import com.google.api.server.spi.config.Api;
+import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiNamespace;
 
 import java.io.IOException;
@@ -45,6 +46,7 @@ public class MessagingEndpoint {
      *
      * @param message The message to send
      */
+    @ApiMethod(name = "massMessage")
     public void sendMessage(@Named("message") String message) throws IOException {
         if (message == null || message.trim().length() == 0) {
             log.warning("Not sending message because it is empty");
@@ -78,6 +80,25 @@ public class MessagingEndpoint {
                     log.warning("Error when sending message : " + error);
                 }
             }
+        }
+    }
+
+    @ApiMethod(name = "userMessage")
+    public void sendMessageToUser(@Named("regId") String regId, @Named("message") String message) throws IOException {
+        if (message == null || message.trim().length() == 0) {
+            return;
+        }
+
+        if (message.length() > 1000) {
+            message = message.substring(0, 1000) + "[...]";
+        }
+
+        Sender sender = new Sender(API_KEY);
+        Message msg = new Message.Builder().addData("message", message).build();
+
+        Result result = sender.send(msg, regId, 5);
+        if (result.getMessageId() == null) {
+            throw new IOException("Message Failed");
         }
     }
 }

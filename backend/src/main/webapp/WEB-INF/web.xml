@@ -6,7 +6,8 @@
         <init-param>
             <param-name>services</param-name>
             <param-value>com.klinker.android.twitter.RegistrationEndpoint,
-                com.klinker.android.twitter.MessagingEndpoint
+                com.klinker.android.twitter.MessagingEndpoint,
+                com.klinker.android.twitter.StreamService
             </param-value>
         </init-param>
     </servlet>

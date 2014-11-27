@@ -14,6 +14,8 @@ public class RegistrationRecord {
     private String regId;
     @Index
     private String username;
+    @Index
+    private long userId;
 
     public RegistrationRecord() { }
 
@@ -25,11 +27,19 @@ public class RegistrationRecord {
         return username;
     }
 
+    public long getUserId() {
+        return userId;
+    }
+
     public void setRegId(String regId) {
         this.regId = regId;
     }
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public void setUserId(long id) {
+        this.userId = id;
     }
 }
