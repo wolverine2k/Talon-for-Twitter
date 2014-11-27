@@ -9,21 +9,27 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
+import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.klinker.android.twitter.registration.Registration;
 
 import java.io.IOException;
-import java.util.Objects;
 
 public abstract class GCMRegisterActivity extends Activity {
 
     private static final String TAG = "GoogleCloudMessaging";
+
+    // if this is true, it will register you with the push notification server and you will
+    // receive a push every single time another (developer i assume right now) hits the api
+    // setting it to false and running the app will unregister you from the system and you will stop
+    // receiving notifications
+    private static final boolean PUSH_NOTIFICATIONS = false;
 
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
@@ -47,13 +53,16 @@ public abstract class GCMRegisterActivity extends Activity {
 
         // Check device for Play Services APK.
         if (checkPlayServices()) {
+
             // If this check succeeds, proceed with normal processing.
             // Otherwise, prompt user to get valid Play Services APK.
             gcm = GoogleCloudMessaging.getInstance(this);
             regid = getRegistrationId(mContext);
 
-            if (regid.isEmpty()) {
+            if (regid.isEmpty() && PUSH_NOTIFICATIONS) {
                 registerInBackground();
+            } else if (!regid.isEmpty() && !PUSH_NOTIFICATIONS) {
+                unregisterInBackground();
             } else {
                 Log.v(TAG, regid);
             }
@@ -78,7 +87,7 @@ public abstract class GCMRegisterActivity extends Activity {
     }
 
     private String getRegistrationId(Context context) {
-        final SharedPreferences prefs = getGCMPreferences(context);
+        final SharedPreferences prefs = getGCMPreferences();
         String registrationId = prefs.getString(PROPERTY_REG_ID, "");
         if (registrationId.isEmpty()) {
             Log.i(TAG, "Registration not found.");
@@ -96,7 +105,7 @@ public abstract class GCMRegisterActivity extends Activity {
         return registrationId;
     }
 
-    private SharedPreferences getGCMPreferences(Context context) {
+    private SharedPreferences getGCMPreferences() {
         // This sample app persists the registration ID in shared preferences, but
         // how you store the regID in your app is up to you.
         return getSharedPreferences(GCMRegisterActivity.class.getSimpleName(),
@@ -114,26 +123,22 @@ public abstract class GCMRegisterActivity extends Activity {
         }
     }
 
-    /**
-     * Registers the application with GCM servers asynchronously.
-     * Stores the registration ID and app versionCode in the application's
-     * shared preferences.
-     */
     private void registerInBackground() {
         new AsyncTask() {
-
-
-            @Override
-            protected void onPostExecute(Object msg) {
-                Toast.makeText(mContext, (String) msg, Toast.LENGTH_SHORT).show();
-            }
 
             @Override
             protected Object doInBackground(Object[] params) {
                 String msg = "";
 
                 Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
-                        new AndroidJsonFactory(), null);
+                        new AndroidJsonFactory(), null)
+                        .setRootUrl("https://talon-twitter.appspot.com/_ah/api/")
+                        .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                            @Override
+                            public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest) throws IOException {
+                                abstractGoogleClientRequest.setDisableGZipContent(true);
+                            }
+                        });
 
                 Registration regService = builder.build();
 
@@ -145,7 +150,7 @@ public abstract class GCMRegisterActivity extends Activity {
                     regid = gcm.register(SENDER_ID);
                     msg = "Device registered, registration ID=" + regid;
 
-                    regService.register(regid);
+                    regService.register(regid).execute();
 
                     // Persist the regID - no need to register again.
                     storeRegistrationId(mContext, regid);
@@ -157,13 +162,54 @@ public abstract class GCMRegisterActivity extends Activity {
         }.execute(null, null, null);
     }
 
+    private void unregisterInBackground() {
+        new AsyncTask() {
+
+            @Override
+            protected Object doInBackground(Object[] params) {
+                String msg = "";
+
+                Registration.Builder builder = new Registration.Builder(AndroidHttp.newCompatibleTransport(),
+                        new AndroidJsonFactory(), null)
+                        .setRootUrl("https://talon-twitter.appspot.com/_ah/api/")
+                        .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                            @Override
+                            public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest) throws IOException {
+                                abstractGoogleClientRequest.setDisableGZipContent(true);
+                            }
+                        });
+
+                Registration regService = builder.build();
+
+                try {
+                    regService.unregister(regid).execute();
+
+                    // Persist the regID - no need to register again.
+                    removeRegistrationId();
+                } catch (IOException ex) {
+                    msg = "Error :" + ex.getMessage();
+                }
+                return msg;
+            }
+        }.execute(null, null, null);
+    }
+
     private void storeRegistrationId(Context context, String regId) {
-        final SharedPreferences prefs = getGCMPreferences(context);
+        final SharedPreferences prefs = getGCMPreferences();
         int appVersion = getAppVersion(context);
         Log.i(TAG, "Saving regId on app version " + appVersion);
+        Log.i(TAG, "regId: " + regId);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(PROPERTY_REG_ID, regId);
         editor.putInt(PROPERTY_APP_VERSION, appVersion);
+        editor.commit();
+    }
+
+    private void removeRegistrationId() {
+        final SharedPreferences prefs = getGCMPreferences();
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.remove(PROPERTY_REG_ID);
+        editor.remove(PROPERTY_APP_VERSION);
         editor.commit();
     }
 }

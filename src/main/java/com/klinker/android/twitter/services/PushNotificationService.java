@@ -1,14 +1,19 @@
 package com.klinker.android.twitter.services;
 
 import android.app.IntentService;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.klinker.android.twitter.R;
 import com.klinker.android.twitter.receivers.PushNotificationReceiver;
 
 import java.util.logging.Level;
@@ -26,27 +31,24 @@ public class PushNotificationService extends IntentService {
 
         Bundle extras = intent.getExtras();
         GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
-        // The getMessageType() intent parameter must be the intent you received
-        // in your BroadcastReceiver.
+
         String messageType = gcm.getMessageType(intent);
 
-        if (extras != null && !extras.isEmpty()) {  // has effect of unparcelling Bundle
-            // Since we're not using two way messaging, this is all we really to check for
+        if (extras != null && !extras.isEmpty()) {
             if (GoogleCloudMessaging.MESSAGE_TYPE_MESSAGE.equals(messageType)) {
-                Logger.getLogger("GCM_RECEIVED").log(Level.INFO, extras.toString());
+                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this)
+                        .setContentTitle("GCM from Talon")
+                        .setContentText(extras.getString("message"))
+                        .setSmallIcon(R.drawable.ic_stat_icon)
+                        .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
 
-                showToast(extras.getString("message"));
+                NotificationManagerCompat notificationManager =
+                        NotificationManagerCompat.from(this);
+
+                notificationManager.notify(17, mBuilder.build());
             }
         }
-        PushNotificationReceiver.completeWakefulIntent(intent);
-    }
 
-    protected void showToast(final String message) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-            }
-        });
+        PushNotificationReceiver.completeWakefulIntent(intent);
     }
 }
