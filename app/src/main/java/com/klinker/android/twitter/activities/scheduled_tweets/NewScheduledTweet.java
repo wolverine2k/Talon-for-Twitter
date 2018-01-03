@@ -18,8 +18,6 @@ package com.klinker.android.twitter.activities.scheduled_tweets;
 
 import android.app.ActionBar;
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -50,11 +48,9 @@ import com.klinker.android.twitter.R;
 import com.klinker.android.twitter.adapters.AutoCompletePeopleAdapter;
 import com.klinker.android.twitter.data.ScheduledTweet;
 import com.klinker.android.twitter.data.sq_lite.FollowersDataSource;
-import com.klinker.android.twitter.data.sq_lite.QueuedDataSource;
 import com.klinker.android.twitter.views.EmojiKeyboard;
-import com.klinker.android.twitter.views.HoloEditText;
-import com.klinker.android.twitter.views.HoloTextView;
-import com.klinker.android.twitter.services.SendScheduledTweet;
+import com.klinker.android.twitter.views.text.HoloEditText;
+import com.klinker.android.twitter.views.text.HoloTextView;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.utils.Utils;
 
@@ -117,7 +113,8 @@ public class NewScheduledTweet extends Activity {
 
             if (!Patterns.WEB_URL.matcher(text).find()) { // no links, normal tweet
                 try {
-                    counter.setText(140 - mEditText.getText().length() + "");
+                    counter.setText(AppSettings.getInstance(context).tweetCharacterCount -
+                            mEditText.getText().length() + "");
                 } catch (Exception e) {
                     counter.setText("0");
                 }
@@ -130,7 +127,7 @@ public class NewScheduledTweet extends Activity {
                     count += 23; // add 23 for the shortened url
                 }
 
-                counter.setText(140 - count + "");
+                counter.setText(AppSettings.getInstance(context).tweetCharacterCount - count + "");
             }
         }
     };

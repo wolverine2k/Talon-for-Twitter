@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2014 Luke Klinker
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 File keystoreProperties = rootProject.file("keystore.properties")
 def props = new Properties()
@@ -9,6 +26,12 @@ if (keystoreProperties.exists()) {
 }
 
 android {
+
+    dexOptions {
+        jumboMode true
+        javaMaxHeapSize "4g"
+    }
+
     packagingOptions {
         exclude 'LICENSE'
         exclude 'README.md'
@@ -16,7 +39,7 @@ android {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE'
-    exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/DEPENDENCIES'
     }
 
     compileSdkVersion Integer.parseInt(project.TARGET_SDK)
@@ -31,6 +54,8 @@ android {
         targetSdkVersion Integer.parseInt(project.TARGET_SDK)
         versionCode code
         versionName project.VERSION_NAME
+
+        multiDexEnabled true
 
         File secretsExists = new File("secrets.properties")
         if (secretsExists.exists()) {
@@ -92,15 +117,20 @@ android {
 
 dependencies {
 
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:${KOTLIN_VERSION}"
+
     wearApp project(':wear')
     
     provided 'org.projectlombok:lombok:1.14.8'
 
     compile "com.android.support:appcompat-v7:${project.ANDROID_SUPPORT_VERSION}"
     compile "com.android.support:customtabs:${project.ANDROID_SUPPORT_VERSION}"
+    compile "com.android.support:support-emoji:${project.ANDROID_SUPPORT_VERSION}"
 
-    compile 'com.klinkerapps:article_viewer:0.15.6'
-    compile 'com.klinkerapps:searchview:2.2.5'
+    compile ('com.klinkerapps:searchview:2.2.5') {
+        exclude module: 'recyclerview-v7'
+    }
+    compile 'com.klinkerapps:article_viewer:0.23.2'
     compile 'com.astuetz:pagerslidingtabstrip:1.0.1'
     compile 'com.github.castorflex.smoothprogressbar:library:0.5.1'
     compile 'de.timroes.android:EnhancedListView:0.3.2@aar'
@@ -115,8 +145,8 @@ dependencies {
     //compile 'org.twitter4j:twitter4j-stream:4.0.4'
 
     compile 'org.apache.httpcomponents:httpmime:4.3.5'
-    compile 'org.apache.httpcomponents:httpcore:4.3.2'
-    compile 'org.jsoup:jsoup:1.7.3'
+    compile 'org.apache.httpcomponents:httpcore:4.4.6'
+    compile 'org.jsoup:jsoup:1.10.2'
 
     compile files('lib/YouTubeAndroidPlayerApi.jar') // version 1.2.1
     compile files('lib/twitter4j-klinker24-fork.jar')
@@ -126,4 +156,15 @@ dependencies {
     compile(name: 'sectioned-recyclerview', ext: 'aar')
 
     compile project(':shared_assets')
+}
+
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        def requested = details.requested
+        if (requested.group == 'com.android.support') {
+            if (!requested.name.startsWith("multidex")) {
+                details.useVersion ANDROID_SUPPORT_VERSION
+            }
+        }
+    }
 }

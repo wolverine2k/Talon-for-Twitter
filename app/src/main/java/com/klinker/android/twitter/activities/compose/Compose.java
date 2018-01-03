@@ -37,6 +37,7 @@ import android.media.ExifInterface;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -63,14 +64,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.klinker.android.twitter.R;
 import com.klinker.android.twitter.data.ScheduledTweet;
 import com.klinker.android.twitter.data.sq_lite.HashtagDataSource;
 import com.klinker.android.twitter.data.sq_lite.QueuedDataSource;
-import com.klinker.android.twitter.views.HoloTextView;
+import com.klinker.android.twitter.views.text.HoloTextView;
 import com.klinker.android.twitter.views.NetworkedCacheableImageView;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.views.EmojiKeyboard;
@@ -89,8 +89,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -156,7 +156,7 @@ public abstract class Compose extends Activity implements
 
             if (!Patterns.WEB_URL.matcher(text).find()) { // no links, normal tweet
                 try {
-                    charRemaining.setText(140 - text.length() + "");
+                    charRemaining.setText(AppSettings.getInstance(context).tweetCharacterCount - text.length() + "");
                 } catch (Exception e) {
                     charRemaining.setText("0");
                 }
@@ -169,7 +169,7 @@ public abstract class Compose extends Activity implements
                     count += 23; // add 23 for the shortened url
                 }
 
-                charRemaining.setText(140 - count + "");
+                charRemaining.setText(AppSettings.getInstance(context).tweetCharacterCount - count + "");
             }
         }
     };
@@ -212,13 +212,6 @@ public abstract class Compose extends Activity implements
             }
         } catch (Exception ex) {
             // Ignore
-        }
-
-        int currentOrientation = getResources().getConfiguration().orientation;
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        } else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
         }
 
         currentAccount = sharedPrefs.getInt("current_account", 1);
@@ -318,7 +311,10 @@ public abstract class Compose extends Activity implements
                                     .setPositiveButton(R.string.twitlonger, new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialogInterface, int i) {
-                                            doneClick();
+                                            boolean close = doneClick();
+                                            if (close) {
+                                                onBackPressed();
+                                            }
                                         }
                                     })
                                     .setNeutralButton(R.string.pwiccer, new DialogInterface.OnClickListener() {
@@ -403,7 +399,7 @@ public abstract class Compose extends Activity implements
 
         //numberAttached.setText("0 " + getString(R.string.attached_images));
 
-        charRemaining.setText(140 - reply.getText().length() + "");
+        charRemaining.setText(AppSettings.getInstance(this).tweetCharacterCount - reply.getText().length() + "");
 
         reply.addTextChangedListener(new TextWatcher() {
             @Override
@@ -766,6 +762,10 @@ public abstract class Compose extends Activity implements
         }
     }
 
+    public static boolean isAndroidN() {
+        return Build.VERSION.SDK_INT > Build.VERSION_CODES.M || Build.VERSION.CODENAME.equals("N");
+    }
+
     public static final int SELECT_PHOTO = 100;
     public static final int CAPTURE_IMAGE = 101;
     public static final int SELECT_GIF = 102;
@@ -957,29 +957,25 @@ public abstract class Compose extends Activity implements
             try {
                 Twitter twitter = Utils.getTwitter(getApplicationContext(), settings);
 
+                String sendTo = contactEntry.getText().toString().replace("@", "").replace(" ", "");
+                User user = twitter.showUser(sendTo);
+                MessageData data = new MessageData(user.getId(), status);
+
                 if (!attachedUri.equals("")) {
                     try {
-                        for (int i = 0; i < imagesAttached; i++) {
-                            File outputDir = context.getCacheDir();
-                            File f = File.createTempFile("compose", "picture_" + i, outputDir);
+                        File f;
 
-                            Bitmap bitmap = getBitmapToSend(Uri.parse(attachedUri[i]));
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos);
-                            byte[] bitmapdata = bos.toByteArray();
-
-                            FileOutputStream fos = new FileOutputStream(f);
-                            fos.write(bitmapdata);
-                            fos.flush();
-                            fos.close();
-
-                            // we wont attach any text to this image at least, since it is a direct message
-                            TwitPicHelper helper = new TwitPicHelper(twitter, " ", f, context);
-                            String url = helper.uploadForUrl();
-
-                            status += " " + url;
+                        if (attachmentType == null) {
+                            // image file
+                            f = ImageUtils.scaleToSend(context, Uri.parse(attachedUri[0]));
+                        } else {
+                            f = new File(URI.create(attachedUri[0]));
                         }
+
+                        UploadedMedia media = twitter.uploadMedia(f);
+                        data.setMediaId(media.getMediaId());
                     } catch (Exception e) {
+                        e.printStackTrace();
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -990,11 +986,8 @@ public abstract class Compose extends Activity implements
 
                 }
 
-                String sendTo = contactEntry.getText().toString().replace("@", "").replace(" ", "");
-
-                twitter.sendDirectMessage(sendTo, status);
-
-                return true;
+                DirectMessageEvent event = twitter.createMessage(data);
+                return event != null;
 
             } catch (TwitterException e) {
                 e.printStackTrace();
@@ -1084,7 +1077,7 @@ public abstract class Compose extends Activity implements
             String mentions = "";
             String[] tokens = message.split(" ");
             String tempString = "";
-            /* Only check for 132 as we are adding (xx/xx) at the end of long tweets */
+            /* Only check for 272 as we are adding (xx/xx) at the end of long tweets */
             for (int i = 0; i < tokens.length; i++) {
                 if(notiId != 0) {
                     /* This is a reply tweet Take any mentions out of the tweets */
@@ -1093,7 +1086,7 @@ public abstract class Compose extends Activity implements
                         continue;
                     }
                 }
-                if (tempString.length() + tokens[i].length() + 1 <= 132) {
+                if (tempString.length() + tokens[i].length() + 1 <= 272) {
                     tempString += tokens[i] + " ";
                 } else {
                     /* We have our split tweet */
@@ -1149,7 +1142,11 @@ public abstract class Compose extends Activity implements
                         media.setLocation(geolocation);
                     }
                 }
-                twitter.updateStatus(media);
+                    
+                twitter4j.Status status = twitter.updateStatus(media);
+                if (status != null) {
+                    notiId = status.getId();
+                }
             }
         }
 
@@ -1178,7 +1175,6 @@ public abstract class Compose extends Activity implements
                     for (int i = 0; i < noOfTweets; i++) {
                         status = multiTweets.first.length()!=0?multiTweets.first:"";
                         status += multiTweets.second.get(i) + "(" + tweetNo + "/" + noOfTweets + ")";
-                        replyText = status.replace("/status/", "");
                         tweetNo++;
                         if (useAccOne) {
                             tweetWithoutImages(twitter);
@@ -1462,7 +1458,7 @@ public abstract class Compose extends Activity implements
         }
     }
 
-    public int calculateInSampleSize(BitmapFactory.Options opt, int reqWidth, int reqHeight) {
+    public static int calculateInSampleSize(BitmapFactory.Options opt, int reqWidth, int reqHeight) {
         // Raw height and width of image
         final int height = opt.outHeight;
         final int width = opt.outWidth;

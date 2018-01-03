@@ -28,7 +28,9 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.klinker.android.twitter.APIKeys;
+import com.klinker.android.twitter.data.EmojiStyle;
 import com.klinker.android.twitter.utils.EmojiUtils;
+import com.klinker.android.twitter.utils.text.EmojiInitializer;
 
 import java.util.Calendar;
 
@@ -81,6 +83,7 @@ public class AppSettings {
     public static final int PAGE_TYPE_SAVED_SEARCH = 11;
     public static final int PAGE_TYPE_ACTIVITY = 12;
     public static final int PAGE_TYPE_FAVORITE_STATUS = 13;
+    public static final int PAGE_TYPE_SAVED_TWEET = 14;
 
     public static final int LAYOUT_TALON = 0;
     public static final int LAYOUT_HANGOUT = 1;
@@ -190,6 +193,8 @@ public class AppSettings {
     public long activityRefresh;
     public long myId;
 
+    public EmojiStyle emojiStyle;
+    public int tweetCharacterCount = 280;
 
     public AppSettings(Context context) {
 
@@ -224,6 +229,7 @@ public class AppSettings {
             favoriteUserNames = sharedPrefs.getString("favorite_user_names_2", "");
             myId = sharedPrefs.getLong("twitter_id_2", 0);
         }
+
         translateURL = sharedPrefs.getString("translate_url", "");
 
         SharedPreferences defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context);
@@ -313,6 +319,19 @@ public class AppSettings {
             useEmoji = sharedPrefs.getBoolean("use_emojis", false);
         } else { // otherwise it is false
             useEmoji = false;
+        }
+
+        if (EmojiInitializer.INSTANCE.isAlreadyUsingGoogleAndroidO()) {
+            this.emojiStyle = EmojiStyle.ANDROID_O;
+        } else {
+            String emojiStyle = sharedPrefs.getString("emoji_style", "android_o");
+            switch (emojiStyle) {
+                case "android_o":
+                    this.emojiStyle = EmojiStyle.ANDROID_O;
+                    break;
+                default:
+                    this.emojiStyle = EmojiStyle.DEFAULT;
+            }
         }
 
         // Integers

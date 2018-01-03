@@ -58,7 +58,7 @@ import com.klinker.android.twitter.services.TalonPullNotificationService;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.activities.compose.ComposeActivity;
 import com.klinker.android.twitter.activities.compose.ComposeDMActivity;
-import com.klinker.android.twitter.views.HoloEditText;
+import com.klinker.android.twitter.views.text.HoloEditText;
 import com.klinker.android.twitter.utils.IOUtils;
 import com.klinker.android.twitter.utils.MySuggestionsProvider;
 import com.klinker.android.twitter.utils.Utils;
@@ -128,15 +128,6 @@ public class ProfilePager extends Activity {
         }
 
         setUpTheme();
-
-        int currentOrientation = getResources().getConfiguration().orientation;
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        }
-        else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        }
-
         getFromIntent();
 
         setContentView(R.layout.tweet_pager);

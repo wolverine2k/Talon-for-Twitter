@@ -25,6 +25,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.v4.content.FileProvider;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -32,15 +33,15 @@ import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 
+import com.klinker.android.twitter.BuildConfig;
 import com.klinker.android.twitter.R;
 import com.klinker.android.twitter.adapters.AutoCompleteHashtagAdapter;
-import com.klinker.android.twitter.adapters.AutoCompletePeopleAdapter;
-import com.klinker.android.twitter.data.sq_lite.FollowersDataSource;
 import com.klinker.android.twitter.data.sq_lite.HashtagDataSource;
 import com.klinker.android.twitter.data.sq_lite.QueuedDataSource;
+import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.utils.UserAutoCompleteHelper;
-import com.klinker.android.twitter.views.HoloEditText;
-import com.klinker.android.twitter.views.HoloTextView;
+import com.klinker.android.twitter.views.text.HoloEditText;
+import com.klinker.android.twitter.views.text.HoloTextView;
 import com.klinker.android.twitter.views.NetworkedCacheableImageView;
 import com.klinker.android.twitter.activities.GiphySearch;
 import com.klinker.android.twitter.activities.scheduled_tweets.ViewScheduledTweets;
@@ -495,7 +496,10 @@ public class ComposeActivity extends Compose {
                         }
                     }
 
-                    captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(f));
+                    Uri photoURI = FileProvider.getUriForFile(context,
+                            BuildConfig.APPLICATION_ID + ".provider", f);
+
+                    captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                     startActivityForResult(captureIntent, CAPTURE_IMAGE);
                 } else if (item == 1) { // attach picture
                     Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
@@ -594,7 +598,7 @@ public class ComposeActivity extends Compose {
             sendStatus(status, Integer.parseInt(charRemaining.getText().toString()));
             return true;
         } else {
-            if (editText.getText().length() + (attachedUri.equals("") ? 0 : 22) <= 140) {
+            if (editText.getText().length() + (attachedUri.equals("") ? 0 : 22) <= AppSettings.getInstance(this).tweetCharacterCount) {
                 // EditText is empty
                 Toast.makeText(context, context.getResources().getString(R.string.error_sending_tweet), Toast.LENGTH_SHORT).show();
             } else {

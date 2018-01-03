@@ -26,7 +26,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import com.klinker.android.twitter.R;
-import com.klinker.android.twitter.views.HoloTextView;
+import com.klinker.android.twitter.views.text.HoloTextView;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -45,13 +45,6 @@ public class PlainTextBrowserActivity extends BrowserActivity {
         webText = (HoloTextView) findViewById(R.id.webpage_text);
         scrollView = (ScrollView) findViewById(R.id.scrollview);
         spinner = (LinearLayout) findViewById(R.id.spinner);
-
-        int currentOrientation = getResources().getConfiguration().orientation;
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        } else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        }
 
         getTextFromSite();
     }

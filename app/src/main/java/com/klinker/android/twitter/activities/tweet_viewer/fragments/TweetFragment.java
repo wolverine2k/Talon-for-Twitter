@@ -67,7 +67,7 @@ import com.klinker.android.twitter.data.App;
 import com.klinker.android.twitter.data.sq_lite.FollowersDataSource;
 import com.klinker.android.twitter.data.sq_lite.HashtagDataSource;
 import com.klinker.android.twitter.utils.ExpansionAnimation;
-import com.klinker.android.twitter.views.HoloEditText;
+import com.klinker.android.twitter.views.text.HoloEditText;
 import com.klinker.android.twitter.services.SendTweet;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.activities.compose.ComposeActivity;
@@ -148,7 +148,8 @@ public class TweetFragment extends Fragment {
 
             if (!text.contains("http")) { // no links, normal tweet
                 try {
-                    charRemaining.setText(140 - reply.getText().length() - (attachedUri.equals("") ? 0 : 23) + "");
+                    charRemaining.setText(AppSettings.getInstance(context).tweetCharacterCount -
+                            reply.getText().length() - (attachedUri.equals("") ? 0 : 23) + "");
                 } catch (Exception e) {
                     charRemaining.setText("0");
                 }
@@ -165,7 +166,7 @@ public class TweetFragment extends Fragment {
                     count += 23;
                 }
 
-                charRemaining.setText(140 - count + "");
+                charRemaining.setText(AppSettings.getInstance(context).tweetCharacterCount - count + "");
             }
         }
     };
@@ -941,7 +942,7 @@ public class TweetFragment extends Fragment {
         }
 
         if (charRemaining != null) {
-            charRemaining.setText(140 - reply.getText().length() + "");
+            charRemaining.setText(AppSettings.getInstance(context).tweetCharacterCount - reply.getText().length() + "");
         }
 
         if (reply != null) {
@@ -1250,7 +1251,7 @@ public class TweetFragment extends Fragment {
         }
     }
 
-    private Status status = null;
+    public Status status = null;
 
     public void getInfo(final View favButton, final TextView favCount, final TextView retweetCount, final long tweetId, final View retweetButton) {
 

@@ -17,6 +17,7 @@
 package com.klinker.android.twitter.activities.tweet_viewer;
 
 import android.app.ActionBar;
+import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.*;
@@ -41,10 +42,12 @@ import android.widget.Toast;
 
 import com.google.android.youtube.player.YouTubeBaseActivity;
 import com.klinker.android.twitter.R;
+import com.klinker.android.twitter.activities.main_fragments.other_fragments.SavedTweetsFragment;
 import com.klinker.android.twitter.adapters.TweetPagerAdapter;
 import com.klinker.android.twitter.data.sq_lite.HashtagDataSource;
 import com.klinker.android.twitter.data.sq_lite.HomeDataSource;
 import com.klinker.android.twitter.data.sq_lite.MentionsDataSource;
+import com.klinker.android.twitter.data.sq_lite.SavedTweetsDataSource;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.activities.compose.ComposeActivity;
 import com.klinker.android.twitter.activities.tweet_viewer.fragments.TweetYouTubeFragment;
@@ -129,13 +132,6 @@ public class TweetPager extends YouTubeBaseActivity {
         }
 
         setUpTheme();
-
-        int currentOrientation = getResources().getConfiguration().orientation;
-        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        } else {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        }
 
         if (getIntent().getBooleanExtra("clicked_youtube", false)) {
             IntentFilter i = new IntentFilter("com.klinker.android.twitter.YOUTUBE_READY");
@@ -452,6 +448,24 @@ public class TweetPager extends YouTubeBaseActivity {
         }
     }
 
+    private void saveTweet() {
+        SavedTweetsDataSource.getInstance(context).createTweet(mSectionsPagerAdapter.tweetFragment.status, settings.currentAccount);
+        context.sendBroadcast(new Intent(SavedTweetsFragment.REFRESH_ACTION));
+
+        if (context instanceof Activity) {
+            ((Activity) context).finish();
+        }
+    }
+
+    private void removeSavedTweet() {
+        SavedTweetsDataSource.getInstance(context).deleteTweet(tweetId);
+        context.sendBroadcast(new Intent(SavedTweetsFragment.REFRESH_ACTION));
+
+        if (context instanceof Activity) {
+            ((Activity) context).finish();
+        }
+    }
+
     private ShareActionProvider mShareActionProvider;
 
     @Override
@@ -489,6 +503,16 @@ public class TweetPager extends YouTubeBaseActivity {
         final int MENU_COPY_TEXT = 3;
         final int MENU_SAVE_IMAGE = 4;
         final int MENU_SPAM = 5;
+        final int MENU_SAVE_TWEET = 7;
+        final int MENU_REMOVE_SAVED_TWEET = 8;
+
+
+        final boolean tweetIsSaved = SavedTweetsDataSource.getInstance(context).isTweetSaved(tweetId, settings.currentAccount);
+        if (tweetIsSaved) {
+            menu.getItem(MENU_SAVE_TWEET).setVisible(false);
+        } else {
+            menu.getItem(MENU_REMOVE_SAVED_TWEET).setVisible(false);
+        }
 
         if (!isMyTweet) {
             menu.getItem(MENU_DELETE_TWEET).setVisible(false);
@@ -510,6 +534,14 @@ public class TweetPager extends YouTubeBaseActivity {
         switch (item.getItemId()) {
             case android.R.id.home:
                 onBackPressed();
+                return true;
+
+            case R.id.menu_save_tweet:
+                saveTweet();
+                return true;
+
+            case R.id.menu_remove_saved_tweet:
+                removeSavedTweet();
                 return true;
 
             case R.id.menu_delete_tweet:

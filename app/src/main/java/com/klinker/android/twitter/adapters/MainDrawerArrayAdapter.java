@@ -29,7 +29,7 @@ import android.widget.ImageView;
 import com.klinker.android.twitter.R;
 import com.klinker.android.twitter.settings.AppSettings;
 import com.klinker.android.twitter.activities.drawer_activities.DrawerActivity;
-import com.klinker.android.twitter.views.HoloTextView;
+import com.klinker.android.twitter.views.text.HoloTextView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -193,7 +193,7 @@ public class MainDrawerArrayAdapter extends ArrayAdapter<String> {
                 int resource = a.getResourceId(0, 0);
                 a.recycle();
                 holder.icon.setImageResource(resource);
-            } else if (text.get(position).equals(context.getResources().getString(R.string.favorite_tweets))) {
+            } else if (text.get(position).equals(context.getResources().getString(R.string.favorite_tweets)) || text.get(position).equals(context.getResources().getString(R.string.saved_tweets))) {
                 TypedArray a = context.getTheme().obtainStyledAttributes(new int[]{R.attr.favoritedButton});
                 int resource = a.getResourceId(0, 0);
                 a.recycle();
@@ -299,6 +299,8 @@ public class MainDrawerArrayAdapter extends ArrayAdapter<String> {
                 return context.getResources().getString(R.string.pictures);
             case AppSettings.PAGE_TYPE_FAV_USERS:
                 return context.getString(R.string.favorite_users_tweets);
+            case AppSettings.PAGE_TYPE_SAVED_TWEET:
+                return context.getString(R.string.saved_tweets);
         }
 
         return null;
